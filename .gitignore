@@ -1,0 +1,31 @@
+# Secrets & Private Configurations
+.env
+*.env
+.env.*
+!.env.example
+
+# Local SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+wattwise.db
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Compressed archives
+*.zip
+
+# Logs & temp files
+*.log
+*.tmp
