@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block title %}Meter Readings{% endblock %}
+{% block breadcrumb %}Meter Readings{% endblock %}
+
+{% block content %}
+<div class="welcome-row">
+  <div>
+    <div class="eyebrow">INTERVAL DATA COLLECTION</div>
+    <h1>Meter <span>Readings.</span></h1>
+    <p class="muted-lead">Capture cumulative meter values. WattWise automatically validates monotonic progression and calculates consumption.</p>
+  </div>
+  <div style="display:flex;gap:10px;">
+    <a class="btn btn-outline" href="{{ url_for('export_csv') }}">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+      Export CSV
+    </a>
+    <button class="btn btn-primary" onclick="openModal('addReadingModal')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      Record Reading
+    </button>
+  </div>
+</div>
+
+<!-- Notice info card -->
+<div class="panel" style="background:#f8fafc;border-left:4px solid var(--primary);margin-bottom:20px;padding:16px 20px;">
+  <div style="display:flex;gap:12px;align-items:center;">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--primary);flex-shrink:0;">
+      <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line>
+    </svg>
+    <div style="font-size:13px;color:var(--slate-700);">
+      <b>Automatic Sequential Period Calculation:</b> Period Usage = Current Cumulative Reading − Previous Reading on that meter. The initial reading creates the baseline.
+    </div>
+  </div>
+</div>
+
+<!-- Filters Bar -->
+<div class="filter-card">
+  <div class="filter-group" style="flex: 1; min-width: 220px;">
+    <label>Instant Search</label>
+    <input class="form-control" id="tableSearch" placeholder="Search by consumer, meter code, region, or date...">
+  </div>
+
+  <form method="get" action="{{ url_for('readings') }}" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+    <div class="filter-group">
+      <label>Filter by Meter</label>
+      <select class="form-control" name="meter_id" onchange="this.form.submit()">
+        <option value="">All Meters</option>
+        {% for m in meters %}
+          <option value="{{ m.meter_id }}" {% if selected_meter == m.meter_id %}selected{% endif %}>
+            {{ m.meter_code }} ({{ m.consumer_name }})
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>From Date</label>
+      <input class="form-control" type="date" name="start" value="{{ start }}">
+    </div>
+
+    <div class="filter-group">
+      <label>To Date</label>
+      <input class="form-control" type="date" name="end" value="{{ end }}">
+    </div>
+
+    <button type="submit" class="btn btn-secondary" style="height: 42px;">Apply Filter</button>
+    {% if selected_meter or start or end %}
+      <a class="btn btn-outline" href="{{ url_for('readings') }}" style="height: 42px;">Reset</a>
+    {% endif %}
+  </form>
+</div>
+
+<!-- Readings Table Panel -->
+<div class="panel">
+  <div class="panel-head">
+    <div>
+      <h3>Recorded Meter Readings</h3>
+      <p>Displaying {{ readings|length }} chronological reading logs</p>
+    </div>
+    <span class="badge badge-commercial">{{ readings|length }} RECORDS</span>
+  </div>
+
+  <div class="table-responsive">
+    <table id="dataTable">
+      <thead>
+        <tr>
+          <th>READING DATE</th>
+          <th>CONSUMER</th>
+          <th>SECTOR</th>
+          <th>METER CODE</th>
+          <th>CUMULATIVE READING</th>
+          <th>PERIOD CONSUMPTION</th>
+          <th>NOTES</th>
+          <th style="text-align: right;">ACTION</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in readings %}
+          <tr>
+            <td>
+              <b style="color:var(--slate-900);">{{ r.reading_date }}</b>
+            </td>
+            <td>
+              <div class="consumer-cell">
+                <div class="consumer-avatar-badge">{{ r.consumer_name[:1]|upper }}</div>
+                <div class="consumer-meta">
+                  <b><a href="{{ url_for('consumer_detail', consumer_id=r.consumer_id) }}">{{ r.consumer_name }}</a></b>
+                  <small>{{ r.region }}</small>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="badge badge-{{ r.consumer_type|lower }}">{{ r.consumer_type }}</span>
+            </td>
+            <td><span class="code-badge">{{ r.meter_code }}</span></td>
+            <td>
+              <b>{{ r.cumulative_kwh|number }} <small style="font-size:11px;color:var(--slate-400);">kWh</small></b>
+            </td>
+            <td>
+              {% if r.consumption_kwh is not none %}
+                <span class="consumption-pill {% if r.consumption_kwh >= 1000 %}critical{% elif r.consumption_kwh >= 500 %}elevated{% endif %}">
+                  {{ r.consumption_kwh|number }} kWh
+                </span>
+              {% else %}
+                <span style="color:var(--slate-400);font-size:12px;">Baseline</span>
+              {% endif %}
+            </td>
+            <td>
+              <span style="font-size:12px;color:var(--slate-500);">{{ r.notes or '—' }}</span>
+            </td>
+            <td style="text-align: right;">
+              <form method="post" action="{{ url_for('delete_reading', reading_id=r.reading_id) }}" onsubmit="return confirm('Are you sure you want to delete this reading? Subsequent interval consumption will be automatically recalculated.');" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="btn btn-outline btn-sm" style="color:var(--rose-600);border-color:#fecdd3;" title="Delete Reading">
+                  ✕
+                </button>
+              </form>
+            </td>
+          </tr>
+        {% else %}
+          <tr class="empty-row">
+            <td colspan="8">
+              <div class="empty-state">
+                <h4>No readings found</h4>
+                <p>No readings match the current filters. Enter a reading to start tracking.</p>
+                <button class="btn btn-primary btn-sm" onclick="openModal('addReadingModal')">Record Reading</button>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal: Add Reading -->
+<div class="modal-backdrop" id="addReadingModal">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Record Meter Reading</h3>
+      <button class="close-btn" onclick="closeModal('addReadingModal')">×</button>
+    </div>
+    <form method="post" action="{{ url_for('add_reading') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group col-full">
+            <label>Physical Meter *</label>
+            <select class="form-control" name="meter_id" id="readingMeterSelect" required>
+              <option value="">Select a meter to record...</option>
+              {% for m in meters %}
+                <option value="{{ m.meter_id }}" data-last-kwh="{{ m.last_cumulative }}" data-last-date="{{ m.last_date }}">
+                  {{ m.meter_code }} — {{ m.consumer_name }}
+                </option>
+              {% endfor %}
+            </select>
+            <!-- Dynamic Helper Notice -->
+            <div id="meterReadingHelper" style="display:none;margin-top:8px;padding:8px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;color:var(--slate-600);"></div>
+          </div>
+
+          <div class="form-group">
+            <label>Reading Date *</label>
+            <input class="form-control" type="date" name="reading_date" required max="{{ today.isoformat() }}" value="{{ today.isoformat() }}">
+          </div>
+
+          <div class="form-group">
+            <label>Cumulative Reading (kWh) *</label>
+            <input class="form-control" type="number" step="0.01" min="0" name="cumulative_kwh" required placeholder="e.g. 1425.50">
+          </div>
+
+          <div class="form-group col-full">
+            <label>Field Notes / Inspection Context (Optional)</label>
+            <textarea class="form-control" name="notes" rows="2" maxlength="500" placeholder="e.g. Routine monthly billing cycle, meter inspection confirmed"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('addReadingModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary" {% if not meters %}disabled{% endif %}>Save Reading →</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

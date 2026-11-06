@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Setup Required · WattWise Energy Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Manrope:wght@600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 80% 20%, #e0e7ff, transparent 40%), #f8fafc; padding: 24px;">
+  <div class="panel" style="max-width: 560px; width: 100%; border-radius: 20px; padding: 40px; box-shadow: var(--elevated-shadow);">
+    <div class="brand-icon-wrap" style="width: 50px; height: 50px; border-radius: 14px; margin-bottom: 24px;">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+    </div>
+    <div class="eyebrow">DATABASE INITIALIZATION NEEDED</div>
+    <h1 style="font-size: 26px; margin-bottom: 12px;">Let's initialize your <span>WattWise database.</span></h1>
+    <p style="color: var(--slate-600); font-size: 13.5px; line-height: 1.6; margin-bottom: 24px;">
+      The application could not find the required database tables. You can initialize the database automatically with either MySQL or SQLite:
+    </p>
+
+    <div style="background: #f8fafc; border: 1px solid var(--slate-200); border-radius: 12px; padding: 18px; margin-bottom: 24px; font-size: 13px;">
+      <b style="color: var(--slate-900); display: block; margin-bottom: 10px;">Quick Setup Commands in Terminal:</b>
+      <div style="margin-bottom: 10px;">
+        <span style="color: var(--slate-500); font-size: 12px; display: block;">1. Initialize tables & seed realistic demo data:</span>
+        <code style="background: #ffffff; border: 1px solid #cbd5e1; padding: 4px 8px; border-radius: 6px; display: block; margin-top: 4px; font-weight: 600; color: var(--primary);">
+          python seed_demo.py
+        </code>
+      </div>
+      <div>
+        <span style="color: var(--slate-500); font-size: 12px; display: block;">2. For MySQL Server 8.0:</span>
+        <code style="background: #ffffff; border: 1px solid #cbd5e1; padding: 4px 8px; border-radius: 6px; display: block; margin-top: 4px; font-weight: 600; color: var(--primary);">
+          python init_db.py --mysql
+        </code>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 12px;">
+      <a class="btn btn-primary" href="{{ url_for('dashboard') }}" style="flex: 1;">
+        Refresh Application ↻
+      </a>
+      <a class="btn btn-outline" href="{{ url_for('system_diagnostics') }}">
+        Diagnostics
+      </a>
+    </div>
+  </div>
+</body>
+</html>

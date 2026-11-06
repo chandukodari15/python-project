@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Reports & Exports Hub{% endblock %}
+{% block breadcrumb %}Reports Hub{% endblock %}
+
+{% block content %}
+<div class="welcome-row">
+  <div>
+    <div class="eyebrow">AUDIT & COMPLIANCE</div>
+    <h1>Reports & <span>Exports.</span></h1>
+    <p class="muted-lead">Generate executive summaries, compliance documentation, and machine-readable datasets.</p>
+  </div>
+</div>
+
+<!-- Data Summary Row -->
+<div class="stats-grid" style="margin-bottom: 28px;">
+  <div class="stat-card">
+    <div class="stat-header">
+      <div class="stat-icon emerald">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+      </div>
+      <span class="stat-pill">DATABASE AUDIT</span>
+    </div>
+    <div class="stat-value">{{ counts.total_readings or 0 }}</div>
+    <div class="stat-label">Interval Readings Recorded</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-header">
+      <div class="stat-icon primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+      </div>
+      <span class="stat-pill">AGGREGATE</span>
+    </div>
+    <div class="stat-value">{{ (counts.total_kwh or 0)|number }}<small>kWh</small></div>
+    <div class="stat-label">Total Measured Electricity</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-header">
+      <div class="stat-icon teal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+      </div>
+      <span class="stat-pill">HARDWARE</span>
+    </div>
+    <div class="stat-value">{{ counts.meters_read or 0 }}</div>
+    <div class="stat-label">Meters in Reporting Scope</div>
+  </div>
+</div>
+
+<!-- 3 Export Options Cards Grid -->
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 28px;">
+  <!-- Option 1: PDF Report -->
+  <div class="panel" style="display: flex; flex-direction: column; justify-content: space-between;">
+    <div>
+      <div style="width: 48px; height: 48px; border-radius: 12px; background: #fee2e2; color: #dc2626; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+      </div>
+      <h3 style="font-family: 'Manrope', sans-serif; font-size: 18px; font-weight: 800; color: var(--slate-900); margin-bottom: 6px;">
+        Executive PDF Report
+      </h3>
+      <p style="font-size: 13px; color: var(--slate-500); line-height: 1.6; margin-bottom: 20px;">
+        Formatted document including executive KPI scorecard, tariff billing totals, carbon emissions summary, and detailed interval breakdown table.
+      </p>
+    </div>
+    <a class="btn btn-primary" href="{{ url_for('export_pdf') }}" style="width: 100%;">
+      Download PDF Report ↓
+    </a>
+  </div>
+
+  <!-- Option 2: CSV Dataset -->
+  <div class="panel" style="display: flex; flex-direction: column; justify-content: space-between;">
+    <div>
+      <div style="width: 48px; height: 48px; border-radius: 12px; background: #dcfce7; color: #16a34a; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+      </div>
+      <h3 style="font-family: 'Manrope', sans-serif; font-size: 18px; font-weight: 800; color: var(--slate-900); margin-bottom: 6px;">
+        Raw Data Export (CSV)
+      </h3>
+      <p style="font-size: 13px; color: var(--slate-500); line-height: 1.6; margin-bottom: 20px;">
+        Complete machine-readable dataset formatted with UTF-8 BOM encoding. Compatible with Excel, Power BI, Python/Pandas, and Tableau.
+      </p>
+    </div>
+    <a class="btn btn-secondary" href="{{ url_for('export_csv') }}" style="width: 100%;">
+      Download CSV Dataset ↓
+    </a>
+  </div>
+
+  <!-- Option 3: Printable Executive View -->
+  <div class="panel" style="display: flex; flex-direction: column; justify-content: space-between;">
+    <div>
+      <div style="width: 48px; height: 48px; border-radius: 12px; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+      </div>
+      <h3 style="font-family: 'Manrope', sans-serif; font-size: 18px; font-weight: 800; color: var(--slate-900); margin-bottom: 6px;">
+        Printable Executive View
+      </h3>
+      <p style="font-size: 13px; color: var(--slate-500); line-height: 1.6; margin-bottom: 20px;">
+        Clean print-optimized webpage styled specifically for paper printouts, browser PDF printing, and formal college viva presentations.
+      </p>
+    </div>
+    <a class="btn btn-outline" href="{{ url_for('print_report') }}" target="_blank" style="width: 100%;">
+      Open Printable View ↗
+    </a>
+  </div>
+</div>
+{% endblock %}

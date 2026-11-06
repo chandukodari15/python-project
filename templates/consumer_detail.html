@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% block title %}{{ consumer.consumer_name }} · Consumer Profile{% endblock %}
+{% block breadcrumb %}
+<a href="{{ url_for('consumers') }}">Consumers</a> <span>/</span> <b>{{ consumer.consumer_name }}</b>
+{% endblock %}
+
+{% block content %}
+<!-- Consumer Header Summary -->
+<div class="panel" style="margin-bottom: 24px;">
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <div class="consumer-avatar-badge" style="width: 56px; height: 56px; font-size: 22px;">
+        {{ consumer.consumer_name[:1]|upper }}
+      </div>
+      <div>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+          <h2 style="font-family: 'Manrope', sans-serif; font-size: 24px; font-weight: 800; color: var(--slate-900);">
+            {{ consumer.consumer_name }}
+          </h2>
+          <span class="status-badge {{ consumer.status|lower }}">{{ consumer.status }}</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 14px; font-size: 13px; color: var(--slate-500);">
+          <span class="badge badge-{{ consumer.consumer_type|lower }}">{{ consumer.consumer_type }}</span>
+          <span><b>Region:</b> {{ consumer.region }}</span>
+          {% if consumer.phone %}<span><b>Phone:</b> {{ consumer.phone }}</span>{% endif %}
+          {% if consumer.email %}<span><b>Email:</b> {{ consumer.email }}</span>{% endif %}
+        </div>
+      </div>
+    </div>
+    <div>
+      <a class="btn btn-outline" href="{{ url_for('readings') }}?consumer_id={{ consumer.consumer_id }}">
+        + Record Meter Reading
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- KPI Summary Cards Grid -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-header">
+      <div class="stat-icon emerald">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+      </div>
+      <span class="stat-pill">LIFETIME</span>
+    </div>
+    <div class="stat-value">{{ total_kwh|number }}<small>kWh</small></div>
+    <div class="stat-label">Total Energy Measured</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-header">
+      <div class="stat-icon primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+      </div>
+      <span class="stat-pill">TIERED TARIFF</span>
+    </div>
+    <div class="stat-value">{{ tariff_calc.total_bill|currency }}</div>
+    <div class="stat-label">Estimated Energy Expenditure</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-header">
+      <div class="stat-icon teal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>
+      </div>
+      <span class="stat-pill">ENVIRONMENT</span>
+    </div>
+    <div class="stat-value">{{ carbon|number }}<small>kg CO₂</small></div>
+    <div class="stat-label">Estimated Carbon Footprint</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-header">
+      <div class="stat-icon amber">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+      </div>
+      <span class="stat-pill">HARDWARE</span>
+    </div>
+    <div class="stat-value">{{ meters|length }}</div>
+    <div class="stat-label">Registered Meters</div>
+  </div>
+</div>
+
+<!-- Consumption Trend Chart -->
+<div class="panel" style="margin-bottom: 24px;">
+  <div class="panel-head">
+    <div>
+      <h3>Consumption Progression</h3>
+      <p>Monthly measured electricity usage for {{ consumer.consumer_name }}</p>
+    </div>
+  </div>
+  {% if monthly_data %}
+    <div class="chart-container" style="height: 280px;">
+      <canvas id="consumerTrendChart"></canvas>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <h4>No monthly trend data</h4>
+      <p>Enter consecutive readings for this consumer's meters to generate trends.</p>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Assigned Meters Table -->
+<div class="panel" style="margin-bottom: 24px;">
+  <div class="panel-head">
+    <div>
+      <h3>Assigned Meters</h3>
+      <p>Hardware connected to this consumer</p>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>METER CODE</th>
+          <th>RATED CAPACITY</th>
+          <th>READINGS RECORDED</th>
+          <th>TOTAL ENERGY</th>
+          <th>STATUS</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in meters %}
+          <tr>
+            <td><span class="code-badge">{{ m.meter_code }}</span></td>
+            <td>{{ (m.meter_capacity|number ~ ' kWh') if m.meter_capacity else '—' }}</td>
+            <td><span class="code-badge">{{ m.reading_count }} readings</span></td>
+            <td><b>{{ m.total_kwh|number }} kWh</b></td>
+            <td><span class="status-badge {{ m.status|lower }}">{{ m.status }}</span></td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5" class="empty-state">No meters registered to this consumer.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Readings Log Table -->
+<div class="panel">
+  <div class="panel-head">
+    <div>
+      <h3>Historical Meter Readings Log</h3>
+      <p>Complete chronological readings history</p>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>DATE</th>
+          <th>METER</th>
+          <th>CUMULATIVE READING</th>
+          <th>PERIOD CONSUMPTION</th>
+          <th>NOTES</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in readings %}
+          <tr>
+            <td><b>{{ r.reading_date }}</b></td>
+            <td><span class="code-badge">{{ r.meter_code }}</span></td>
+            <td><b>{{ r.cumulative_kwh|number }} kWh</b></td>
+            <td>
+              {% if r.consumption_kwh is not none %}
+                <span class="consumption-pill {% if r.consumption_kwh >= 500 %}elevated{% endif %}">
+                  {{ r.consumption_kwh|number }} kWh
+                </span>
+              {% else %}
+                <span style="color:var(--slate-400);font-size:12px;">Baseline</span>
+              {% endif %}
+            </td>
+            <td>{{ r.notes or '—' }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5" class="empty-state">No readings recorded yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if monthly_data %}
+<script>
+const mData = {{ monthly_data|tojson }};
+new Chart(document.getElementById('consumerTrendChart'), {
+  type: 'bar',
+  data: {
+    labels: mData.map(d => d.month),
+    datasets: [{
+      label: 'Monthly Consumption (kWh)',
+      data: mData.map(d => Number(d.kwh || 0)),
+      backgroundColor: 'rgba(79, 70, 229, 0.75)',
+      borderRadius: 6,
+      maxBarThickness: 36
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#0f172a',
+        padding: 10,
+        callbacks: {
+          label: (ctx) => `${Number(ctx.raw).toLocaleString()} kWh`
+        }
+      }
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: '#64748b' } },
+      y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { color: '#64748b' } }
+    }
+  }
+});
+</script>
+{% endif %}
+{% endblock %}

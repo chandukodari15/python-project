@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}High-Usage Alerts Surveillance{% endblock %}
+{% block breadcrumb %}High-Usage Alerts{% endblock %}
+
+{% block content %}
+<div class="welcome-row">
+  <div>
+    <div class="eyebrow">SURVEILLANCE & MONITORING</div>
+    <h1>High-Usage <span>Alerts.</span></h1>
+    <p class="muted-lead">Identify abnormal energy surges and audit consumption periods that exceed defined thresholds.</p>
+  </div>
+  <div>
+    <span class="badge badge-industrial" style="padding: 8px 16px; font-size: 13px;">
+      Flagged Total: {{ total_flagged_kwh|number }} kWh
+    </span>
+  </div>
+</div>
+
+<!-- Advisory Notice -->
+<div class="panel" style="background:var(--amber-50);border-color:#fde68a;margin-bottom:24px;padding:16px 20px;">
+  <div style="display:flex;gap:12px;align-items:flex-start;">
+    <div style="font-size:20px;color:var(--amber-600);line-height:1;">⚠️</div>
+    <div>
+      <b style="color:var(--amber-600);font-size:13px;">Analytical Anomaly Detection</b>
+      <p style="font-size:12px;color:var(--slate-700);margin-top:2px;">
+        High consumption periods are normal for large industrial or commercial facilities, but may indicate equipment faults or seasonal air-conditioning spikes for residential meters.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Threshold Configuration Bar -->
+<div class="filter-card">
+  <form method="get" action="{{ url_for('alerts') }}" style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;flex:1;">
+    <div class="filter-group" style="min-width:220px;">
+      <label>Alert Threshold (kWh per Period)</label>
+      <input class="form-control" type="number" step="10" min="50" name="threshold" value="{{ threshold|int_number }}">
+    </div>
+
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button type="submit" class="btn btn-primary" style="height:42px;">Apply Threshold</button>
+      <button type="submit" name="save" value="1" class="btn btn-secondary" style="height:42px;" title="Save as system default threshold">
+        Save as Default
+      </button>
+    </div>
+
+    <div style="display:flex;gap:6px;margin-left:auto;align-items:center;">
+      <span style="font-size:11px;color:var(--slate-400);font-weight:700;">PRESETS:</span>
+      <a class="btn btn-outline btn-sm" href="{{ url_for('alerts') }}?threshold=250">250 kWh</a>
+      <a class="btn btn-outline btn-sm" href="{{ url_for('alerts') }}?threshold=500">500 kWh</a>
+      <a class="btn btn-outline btn-sm" href="{{ url_for('alerts') }}?threshold=750">750 kWh</a>
+      <a class="btn btn-outline btn-sm" href="{{ url_for('alerts') }}?threshold=1000">1000 kWh</a>
+      <a class="btn btn-outline btn-sm" href="{{ url_for('alerts') }}?threshold=2000">2000 kWh</a>
+    </div>
+  </form>
+</div>
+
+<!-- Flagged Periods Table -->
+<div class="panel">
+  <div class="panel-head">
+    <div>
+      <h3>Flagged Consumption Periods</h3>
+      <p>{{ alerts|length }} recorded interval(s) at or above {{ threshold|int_number }} kWh</p>
+    </div>
+    <span class="status-badge warning">THRESHOLD ≥ {{ threshold|int_number }} kWh</span>
+  </div>
+
+  <div class="table-responsive">
+    <table id="dataTable">
+      <thead>
+        <tr>
+          <th>SEVERITY</th>
+          <th>READING DATE</th>
+          <th>CONSUMER NAME</th>
+          <th>REGION</th>
+          <th>SECTOR</th>
+          <th>METER CODE</th>
+          <th>CUMULATIVE READING</th>
+          <th>MEASURED USAGE</th>
+          <th>ESTIMATED BILL</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in alerts %}
+          <tr>
+            <td>
+              <span class="status-badge {{ a.severity_class }}">{{ a.severity }}</span>
+            </td>
+            <td><b>{{ a.reading_date }}</b></td>
+            <td>
+              <div class="consumer-cell">
+                <div class="consumer-avatar-badge">{{ a.consumer_name[:1]|upper }}</div>
+                <div class="consumer-meta">
+                  <b><a href="{{ url_for('consumer_detail', consumer_id=a.consumer_id) }}">{{ a.consumer_name }}</a></b>
+                  <small>{{ a.notes or 'Periodic reading' }}</small>
+                </div>
+              </div>
+            </td>
+            <td>{{ a.region }}</td>
+            <td><span class="badge badge-{{ a.consumer_type|lower }}">{{ a.consumer_type }}</span></td>
+            <td><span class="code-badge">{{ a.meter_code }}</span></td>
+            <td>{{ a.cumulative_kwh|number }} kWh</td>
+            <td>
+              <span class="consumption-pill {% if a.consumption_kwh >= 1000 %}critical{% else %}elevated{% endif %}">
+                {{ a.consumption_kwh|number }} kWh
+              </span>
+            </td>
+            <td><b>{{ a.estimated_bill|currency }}</b></td>
+          </tr>
+        {% else %}
+          <tr class="empty-row">
+            <td colspan="9">
+              <div class="empty-state">
+                <div class="empty-icon-wrap" style="color:var(--emerald-600);background:var(--emerald-50);">
+                  ✓
+                </div>
+                <h4>No periods meet this threshold</h4>
+                <p>All recorded meter intervals are within normal range for threshold {{ threshold|int_number }} kWh.</p>
+                <a class="btn btn-outline btn-sm" href="{{ url_for('alerts') }}?threshold=250">Try 250 kWh</a>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

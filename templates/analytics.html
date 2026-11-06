@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+{% block title %}Consumption Analytics{% endblock %}
+{% block breadcrumb %}Analytics{% endblock %}
+
+{% block content %}
+<div class="welcome-row">
+  <div>
+    <div class="eyebrow">DATA INTELLIGENCE</div>
+    <h1>Consumption <span>Analytics.</span></h1>
+    <p class="muted-lead">Deep analytical breakdowns, regional comparisons, and sector demand trends.</p>
+  </div>
+  <div style="display: flex; gap: 10px;">
+    <a class="btn btn-outline" href="{{ url_for('export_csv') }}">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+      Export CSV
+    </a>
+    <a class="btn btn-primary" href="{{ url_for('export_pdf') }}">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+      Download PDF Report
+    </a>
+  </div>
+</div>
+
+<!-- Advanced Filter Form -->
+<form class="filter-card" method="get" action="{{ url_for('analytics') }}">
+  <div class="filter-group">
+    <label>From Date</label>
+    <input class="form-control" type="date" name="start" value="{{ start }}">
+  </div>
+
+  <div class="filter-group">
+    <label>To Date</label>
+    <input class="form-control" type="date" name="end" value="{{ end }}">
+  </div>
+
+  <div class="filter-group">
+    <label>Region</label>
+    <select class="form-control" name="region">
+      <option value="">All Regions</option>
+      {% for r in regions %}
+        <option value="{{ r }}" {% if selected_region == r %}selected{% endif %}>{{ r }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="filter-group">
+    <label>Sector / Type</label>
+    <select class="form-control" name="consumer_type">
+      <option value="">All Sectors</option>
+      {% for t in types %}
+        <option value="{{ t }}" {% if selected_type == t %}selected{% endif %}>{{ t }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="filter-group">
+    <label>Consumer</label>
+    <select class="form-control" name="consumer_id">
+      <option value="">All Consumers</option>
+      {% for c in consumers %}
+        <option value="{{ c.consumer_id }}" {% if selected_consumer == c.consumer_id %}selected{% endif %}>{{ c.consumer_name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <button type="submit" class="btn btn-primary" style="height: 42px;">Apply Filter</button>
+  {% if start or end or selected_region or selected_type or selected_consumer %}
+    <a class="btn btn-outline" href="{{ url_for('analytics') }}" style="height: 42px;">Reset</a>
+  {% endif %}
+</form>
+
+<!-- Analytics KPI Cards Grid -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-header">
+      <div class="stat-icon emerald">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+      </div>
+      <span class="stat-pill">TOTAL MEASURED</span>
+    </div>
+    <div class="stat-value">{{ total|number }}<small>kWh</small></div>
+    <div class="stat-label">Net Filtered Consumption</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-header">
+      <div class="stat-icon primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+      </div>
+      <span class="stat-pill">PERIOD AVERAGE</span>
+    </div>
+    <div class="stat-value">{{ average|number }}<small>kWh</small></div>
+    <div class="stat-label">Average Measured Period</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-header">
+      <div class="stat-icon amber">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+      </div>
+      <span class="stat-pill">MAX PEAK</span>
+    </div>
+    <div class="stat-value">{{ peak|number }}<small>kWh</small></div>
+    <div class="stat-label">Observed Peak Single Interval</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-header">
+      <div class="stat-icon teal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>
+      </div>
+      <span class="stat-pill">EST. EXPENDITURE</span>
+    </div>
+    <div class="stat-value">{{ total_cost|currency }}</div>
+    <div class="stat-label">Carbon Est: {{ carbon_kg|number }} kg CO₂</div>
+  </div>
+</div>
+
+<!-- 2x2 Analytics Charts Grid -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px;">
+  <!-- Chart 1: Monthly Usage -->
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <h3>Monthly Consumption Progression</h3>
+        <p>Total measured energy (kWh) grouped by month</p>
+      </div>
+    </div>
+    <div class="chart-container chart-tall">
+      <canvas id="monthlyBarChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Chart 2: Regional Comparison -->
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <h3>Regional Energy Distribution</h3>
+        <p>Aggregated consumption by municipality / region (kWh)</p>
+      </div>
+    </div>
+    <div class="chart-container chart-tall">
+      <canvas id="regionalBarChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Chart 3: Top Consumers Ranking -->
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <h3>Top Energy Consumers</h3>
+        <p>Highest consuming accounts across filtered intervals (kWh)</p>
+      </div>
+    </div>
+    <div class="chart-container chart-tall">
+      <canvas id="topConsumersChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Chart 4: Sector Share -->
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <h3>Sector Breakdown</h3>
+        <p>Proportion by consumer type (Residential, Commercial, Industrial, Agri)</p>
+      </div>
+    </div>
+    <div class="chart-container chart-tall">
+      <canvas id="sectorPieChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Detailed Analyzed Records Table -->
+<div class="panel">
+  <div class="panel-head">
+    <div>
+      <h3>Analyzed Interval Records</h3>
+      <p>Displaying top {{ records|length }} calculated periods matching current filters</p>
+    </div>
+    <span class="badge badge-commercial">{{ records|length }} RECORDS</span>
+  </div>
+
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>READING DATE</th>
+          <th>CONSUMER</th>
+          <th>REGION</th>
+          <th>SECTOR</th>
+          <th>METER CODE</th>
+          <th>CUMULATIVE READING</th>
+          <th>PERIOD CONSUMPTION</th>
+          <th>ESTIMATED BILL</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in records %}
+          <tr>
+            <td><b>{{ r.reading_date }}</b></td>
+            <td>
+              <div class="consumer-cell">
+                <div class="consumer-avatar-badge">{{ r.consumer_name[:1]|upper }}</div>
+                <div class="consumer-meta">
+                  <b><a href="{{ url_for('consumer_detail', consumer_id=r.consumer_id) }}">{{ r.consumer_name }}</a></b>
+                </div>
+              </div>
+            </td>
+            <td>{{ r.region }}</td>
+            <td><span class="badge badge-{{ r.consumer_type|lower }}">{{ r.consumer_type }}</span></td>
+            <td><span class="code-badge">{{ r.meter_code }}</span></td>
+            <td>{{ r.cumulative_kwh|number }} kWh</td>
+            <td>
+              {% if r.consumption_kwh is not none %}
+                <span class="consumption-pill {% if r.consumption_kwh >= 1000 %}critical{% elif r.consumption_kwh >= 500 %}elevated{% endif %}">
+                  {{ r.consumption_kwh|number }} kWh
+                </span>
+              {% else %}
+                <span style="color:var(--slate-400);font-size:12px;">Baseline</span>
+              {% endif %}
+            </td>
+            <td>
+              <b>{{ r.estimated_bill|currency }}</b>
+            </td>
+          </tr>
+        {% else %}
+          <tr class="empty-row">
+            <td colspan="8">
+              <div class="empty-state">
+                <h4>No reading data available</h4>
+                <p>Try clearing filters or adding more readings.</p>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const mData = {{ month_chart|tojson }};
+const rData = {{ region_chart|tojson }};
+const cData = {{ consumer_chart|tojson }};
+const sData = {{ sector_chart|tojson }};
+
+const commonOpts = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: '#0f172a',
+      padding: 10,
+      cornerRadius: 6,
+      callbacks: {
+        label: (ctx) => `${Number(ctx.raw).toLocaleString()} kWh`
+      }
+    }
+  },
+  scales: {
+    x: { grid: { display: false }, ticks: { color: '#64748b' } },
+    y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { color: '#64748b' } }
+  }
+};
+
+// 1. Monthly Chart
+new Chart(document.getElementById('monthlyBarChart'), {
+  type: 'bar',
+  data: {
+    labels: mData.labels,
+    datasets: [{
+      data: mData.values,
+      backgroundColor: 'rgba(79, 70, 229, 0.8)',
+      borderRadius: 6,
+      maxBarThickness: 34
+    }]
+  },
+  options: commonOpts
+});
+
+// 2. Regional Chart
+new Chart(document.getElementById('regionalBarChart'), {
+  type: 'bar',
+  data: {
+    labels: rData.labels,
+    datasets: [{
+      data: rData.values,
+      backgroundColor: 'rgba(13, 148, 136, 0.8)',
+      borderRadius: 6,
+      maxBarThickness: 34
+    }]
+  },
+  options: commonOpts
+});
+
+// 3. Top Consumers Chart (Horizontal Bar)
+new Chart(document.getElementById('topConsumersChart'), {
+  type: 'bar',
+  data: {
+    labels: cData.labels,
+    datasets: [{
+      data: cData.values,
+      backgroundColor: 'rgba(99, 102, 241, 0.75)',
+      borderRadius: 6,
+      maxBarThickness: 24
+    }]
+  },
+  options: {
+    ...commonOpts,
+    indexAxis: 'y',
+    scales: {
+      x: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { color: '#64748b' } },
+      y: { grid: { display: false }, ticks: { color: '#64748b' } }
+    }
+  }
+});
+
+// 4. Sector Doughnut Chart
+new Chart(document.getElementById('sectorPieChart'), {
+  type: 'doughnut',
+  data: {
+    labels: sData.labels,
+    datasets: [{
+      data: sData.values,
+      backgroundColor: ['#4f46e5', '#0284c7', '#d97706', '#16a34a', '#64748b'],
+      borderWidth: 2,
+      borderColor: '#ffffff'
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'right', labels: { boxWidth: 12, font: { family: 'DM Sans', size: 12 } } },
+      tooltip: {
+        backgroundColor: '#0f172a',
+        callbacks: {
+          label: (ctx) => `${ctx.label}: ${Number(ctx.raw).toLocaleString()} kWh`
+        }
+      }
+    },
+    cutout: '65%'
+  }
+});
+</script>
+{% endblock %}

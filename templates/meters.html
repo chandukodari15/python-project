@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% block title %}Meter Registry{% endblock %}
+{% block breadcrumb %}Meter Registry{% endblock %}
+
+{% block content %}
+<div class="welcome-row">
+  <div>
+    <div class="eyebrow">HARDWARE INVENTORY</div>
+    <h1>Meter <span>Registry.</span></h1>
+    <p class="muted-lead">Register and manage physical electricity meters assigned to active consumers.</p>
+  </div>
+  <button class="btn btn-primary" onclick="openModal('addMeterModal')">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+    Register Meter
+  </button>
+</div>
+
+<!-- Search & Meter Stats Filter Card -->
+<div class="filter-card">
+  <div class="filter-group" style="flex: 1; min-width: 260px;">
+    <label>Instant Search</label>
+    <input class="form-control" id="tableSearch" placeholder="Search by meter code, consumer name, or region...">
+  </div>
+  <div style="display: flex; gap: 12px; align-items: center;">
+    <span class="badge badge-residential" style="padding: 8px 14px; font-size: 12px;">
+      Total: {{ meters|length }} Meters
+    </span>
+    <span class="badge badge-commercial" style="padding: 8px 14px; font-size: 12px;">
+      Active: {{ meters|selectattr('status', 'equalto', 'Active')|list|length }}
+    </span>
+  </div>
+</div>
+
+<!-- Meters Table Panel -->
+<div class="panel">
+  <div class="panel-head">
+    <div>
+      <h3>Registered Meters</h3>
+      <p>Hardware devices installed in the field</p>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table id="dataTable">
+      <thead>
+        <tr>
+          <th>METER CODE</th>
+          <th>ASSIGNED CONSUMER</th>
+          <th>REGION</th>
+          <th>RATED CAPACITY</th>
+          <th>READINGS</th>
+          <th>TOTAL ENERGY</th>
+          <th>STATUS</th>
+          <th style="text-align: right;">ACTIONS</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in meters %}
+          <tr>
+            <td>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="code-badge" style="font-size: 12px; font-weight: 700; color: var(--primary);">
+                  {{ m.meter_code }}
+                </span>
+              </div>
+              <small style="color: var(--slate-400); font-size: 10px;">ID #{{ m.meter_id }}</small>
+            </td>
+            <td>
+              <div class="consumer-cell">
+                <div class="consumer-avatar-badge">{{ m.consumer_name[:1]|upper }}</div>
+                <div class="consumer-meta">
+                  <b><a href="{{ url_for('consumer_detail', consumer_id=m.consumer_id) }}">{{ m.consumer_name }}</a></b>
+                  <small>{{ m.consumer_type }}</small>
+                </div>
+              </div>
+            </td>
+            <td><b>{{ m.region }}</b></td>
+            <td>
+              {{ (m.meter_capacity|number ~ ' kWh') if m.meter_capacity else 'Standard' }}
+            </td>
+            <td>
+              <span class="code-badge">{{ m.reading_count }} readings</span>
+            </td>
+            <td>
+              <b>{{ m.total_kwh|number }} <small style="font-size: 11px; color: var(--slate-400);">kWh</small></b>
+            </td>
+            <td>
+              <span class="status-badge {{ m.status|lower }}">{{ m.status }}</span>
+            </td>
+            <td style="text-align: right;">
+              <div style="display: inline-flex; gap: 6px; align-items: center;">
+                <a class="btn btn-secondary btn-sm" href="{{ url_for('readings') }}?meter_id={{ m.meter_id }}" title="View Readings">
+                  Readings
+                </a>
+                <button class="btn btn-outline btn-sm" onclick="populateEditMeterModal({{ m.meter_id }}, '{{ m.meter_code }}', '{{ m.meter_capacity or '' }}', '{{ m.status }}')" title="Edit Meter">
+                  ✎
+                </button>
+                <form method="post" action="{{ url_for('toggle_meter', meter_id=m.meter_id) }}" style="display: inline;">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <button class="btn btn-outline btn-sm" title="Toggle Status">
+                    ↻
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        {% else %}
+          <tr class="empty-row">
+            <td colspan="8">
+              <div class="empty-state">
+                <h4>No meters registered</h4>
+                <p>Register a consumer first, then add a physical meter.</p>
+                <button class="btn btn-primary btn-sm" onclick="openModal('addMeterModal')">Register Meter</button>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal: Add Meter -->
+<div class="modal-backdrop" id="addMeterModal">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Register New Meter</h3>
+      <button class="close-btn" onclick="closeModal('addMeterModal')">×</button>
+    </div>
+    <form method="post" action="{{ url_for('add_meter') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group col-full">
+            <label>Assigned Consumer *</label>
+            <select class="form-control" name="consumer_id" required>
+              <option value="">Select an active consumer...</option>
+              {% for c in consumers %}
+                <option value="{{ c.consumer_id }}">{{ c.consumer_name }} ({{ c.region }} · {{ c.consumer_type }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Unique Meter Serial Code *</label>
+            <input class="form-control" name="meter_code" required placeholder="e.g. WW-TPT-501">
+          </div>
+          <div class="form-group">
+            <label>Rated Capacity kWh (Optional)</label>
+            <input class="form-control" type="number" step="0.01" min="0" name="meter_capacity" placeholder="e.g. 50000">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('addMeterModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary" {% if not consumers %}disabled{% endif %}>Register Meter →</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Edit Meter -->
+<div class="modal-backdrop" id="editMeterModal">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Edit Meter Settings</h3>
+      <button class="close-btn" onclick="closeModal('editMeterModal')">×</button>
+    </div>
+    <form method="post" id="editMeterForm" action="">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Meter Serial Code *</label>
+            <input class="form-control" id="edit_meter_code" name="meter_code" required>
+          </div>
+          <div class="form-group">
+            <label>Rated Capacity (kWh)</label>
+            <input class="form-control" type="number" step="0.01" min="0" id="edit_meter_capacity" name="meter_capacity">
+          </div>
+          <div class="form-group col-full">
+            <label>Status</label>
+            <select class="form-control" id="edit_meter_status" name="status">
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('editMeterModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function populateEditMeterModal(id, code, capacity, status) {
+  document.getElementById('editMeterForm').action = '/meters/' + id + '/edit';
+  document.getElementById('edit_meter_code').value = code;
+  document.getElementById('edit_meter_capacity').value = capacity;
+  document.getElementById('edit_meter_status').value = status;
+  openModal('editMeterModal');
+}
+</script>
+{% endblock %}
